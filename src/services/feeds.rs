@@ -1,12 +1,5 @@
-use entity::Entity;
-use client::Client;
-
 #[derive(Debug, Default, Serialize, Deserialize)]
-pub struct Feeds<'a> {
-    #[serde(skip_serializing)]
-    #[serde(skip_deserializing)]
-    client: Option<&'a Client>,
-
+pub struct Feeds {
     pub timeline_url: String,
     pub user_url: String,
     pub current_user_public_url: String,
@@ -35,15 +28,3 @@ pub struct FeedLinks {
     pub current_user_organization: FeedLink,
     pub current_user_organizations: Vec<FeedLink>,
 }
-
-impl<'a> Entity<'a> for Feeds<'a> {
-    fn set_client(&mut self, client: &'a Client) {
-        self.client = Some(client);
-    }
-
-    fn get_client(&self) -> Option<&'a Client> {
-        self.client
-    }
-}
-
-impl<'a> Feeds<'a> {}

@@ -1,8 +1,4 @@
-use entity::Entity;
-use client::{Client, AsUrlParams, EmptyUrlParams};
-use entities::chrono::{DateTime, UTC};
-use errors::*;
-use reqwest::Response;
+use services::chrono::{DateTime, UTC};
 
 #[derive(Default, Debug)]
 pub struct Params {
@@ -15,43 +11,6 @@ pub struct Params {
     /// Only show notifications updated before the given time.
     pub before: Option<DateTime<UTC>>,
 }
-
-impl<'a> AsUrlParams for &'a Params {
-    type I = Vec<(&'static str, String)>;
-    type K = &'static str;
-    type V = String;
-
-    fn as_url_params(self) -> Self::I {
-        let mut params = Vec::new();
-
-        if let Some(all) = self.all {
-            if all {
-                params.push(("all", "true".to_owned()));
-            } else {
-                params.push(("all", "false".to_owned()));
-            }
-        }
-
-        if let Some(participating) = self.participating {
-            if participating {
-                params.push(("participating", "true".to_owned()));
-            } else {
-                params.push(("participating", "false".to_owned()));
-            }
-        }
-
-        if let Some(since) = self.since {
-            params.push(("since", since.to_rfc3339()))
-        }
-
-        if let Some(before) = self.before {
-            params.push(("before", before.to_rfc3339()))
-        }
-
-        params
-    }
-}
-
 
 /// Reason for which the user got a notification.
 #[derive(Debug, Serialize, Deserialize)]
@@ -94,11 +53,7 @@ impl Default for Reason {
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
-pub struct Thread<'a> {
-    #[serde(skip_serializing)]
-    #[serde(skip_deserializing)]
-    client: Option<&'a Client>,
-
+pub struct Thread {
     pub id: u32,
     pub reason: Reason,
     pub unread: bool,
@@ -143,46 +98,7 @@ pub struct Repository {
     pub url: String,
 }
 
-impl<'a> Entity<'a> for Thread<'a> {
-    fn set_client(&mut self, client: &'a Client) {
-        self.client = Some(client);
-    }
-
-    fn get_client(&self) -> Option<&'a Client> {
-        self.client
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MarkRead {
     last_read_at: DateTime<UTC>,
-}
-
-impl<'a> Thread<'a> {
-    pub fn new(client: &'a Client) -> Self {
-        let mut user: Self = Default::default();
-        user.set_client(client);
-        user
-    }
-
-    pub fn id(&self) -> u32 {
-        self.id
-    }
-
-    pub fn mark_read(&self) -> Result<Response> {
-        self.patch(
-            vec!["notifications", "thread", &self.id().to_string()],
-            &MarkRead { last_read_at: UTC::now() })
-    }
-
-    pub fn get(&mut self) -> Result<Response> {
-        if let Some(client) = self.get_client() {
-            let path = vec!["notifications".to_owned(), "thread".to_owned(), self.id().to_string()];
-            let params = EmptyUrlParams{};
-            let resp = client.get_entity(&path, Some(&params), self)?;
-            Ok(resp)
-        } else {
-            Err(ErrorKind::UninitializedEntity.into())
-        }
-    }
 }
